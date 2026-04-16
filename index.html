@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pastebin</title>
+  <style>
+    html, body { height: 100%; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; box-sizing: border-box; line-height: 1.5; display: flex; flex-direction: column; gap: 0.75rem; }
+    h1 { margin: 0; font-size: 2rem; font-weight: 600; }
+    .toolbar { display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; }
+    textarea { width: 100%; flex: 1; min-height: 0; box-sizing: border-box; font-family: Consolas, 'Courier New', monospace; }
+    button { margin-right: 0; padding: .9rem 1.4rem; font-size: 1rem; font-weight: 600; }
+    pre { margin: 0; background: #f5f5f5; padding: .6rem .8rem; white-space: pre-wrap; min-height: 2.25rem; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>Pastebin</h1>
+    <button id="update">Update</button>
+  </div>
+  <textarea id="content" placeholder="paste text here"></textarea>
+  <pre id="output"></pre>
+  <script>
+    const api = '/api';
+    const content = document.getElementById('content');
+    const output = document.getElementById('output');
+    let lastSignature = '';
+
+    function signatureFromHeaders(response) {
+      return `${response.headers.get('Content-Length') || ''}:${response.headers.get('Last-Modified') || ''}`;
+    }
+
+    function nowText() {
+      return new Date().toLocaleString('zh-CN', { hour12: false });
+    }
+
+    function setStatus(text) {
+      output.textContent = `[${nowText()}] ${text}`;
+    }
+
+    function applyMaxBytes(response) {
+      const maxBytes = Number(response.headers.get('X-Max-Bytes'));
+      if (Number.isFinite(maxBytes) && maxBytes > 0) {
+        content.maxLength = maxBytes;
+      }
+    }
+
+    function showError(error) {
+      setStatus(String(error));
+    }
+
+    async function loadContent() {
+      const response = await fetch(api);
+      applyMaxBytes(response);
+      content.value = await response.text();
+      lastSignature = signatureFromHeaders(response);
+      setStatus('loaded');
+    }
+
+    async function updateContent() {
+      await fetch(api, { method: 'PUT', body: content.value, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      await loadContent();
+    }
+
+    async function pollForChanges() {
+      const response = await fetch(api, { method: 'HEAD' });
+      applyMaxBytes(response);
+      const currentSignature = signatureFromHeaders(response);
+      if (lastSignature && currentSignature !== lastSignature) {
+        await loadContent();
+        return;
+      }
+      lastSignature = currentSignature;
+      setStatus(`size: ${response.headers.get('Content-Length')}; last-modified: ${response.headers.get('Last-Modified')}`);
+    }
+
+    document.getElementById('update').onclick = () => {
+      updateContent().catch(showError);
+    };
+
+    loadContent().catch(showError);
+
+    setInterval(() => {
+      pollForChanges().catch(showError);
+    }, 1000);
+  </script>
+</body>
+</html>
