@@ -1,6 +1,6 @@
-# Pastebin backend
+# Pastebin
 
-Minimal standard-library backend for a single paste.
+Zero-dependency, ultra-minimal single-paste backend using only Python's standard library.
 
 ## Run
 
