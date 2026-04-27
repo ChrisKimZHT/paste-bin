@@ -47,6 +47,12 @@ class PasteHandler(BaseHTTPRequestHandler):
         if data_length is not None:
             self.send_header("X-Data-Length", str(data_length))
 
+    def send_api_cache_control_headers(self) -> None:
+        # Prevent browsers and intermediaries from storing API responses.
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+
     @property
     def settings(self) -> Settings:
         return self.server.settings  # type: ignore[attr-defined]
@@ -99,6 +105,7 @@ class PasteHandler(BaseHTTPRequestHandler):
         data, mtime = self.store.read(paste_id)
         self.send_response(HTTPStatus.OK)
         self.send_api_header(paste_id, len(data))
+        self.send_api_cache_control_headers()
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Last-Modified", formatdate(mtime, usegmt=True))
         self.end_headers()
@@ -117,6 +124,7 @@ class PasteHandler(BaseHTTPRequestHandler):
         data, mtime = self.store.read(paste_id)
         self.send_response(HTTPStatus.OK)
         self.send_api_header(paste_id, len(data))
+        self.send_api_cache_control_headers()
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Last-Modified", formatdate(mtime, usegmt=True))
         self.end_headers()
@@ -160,6 +168,7 @@ class PasteHandler(BaseHTTPRequestHandler):
         self.store.write(paste_id, text)
         self.send_response(HTTPStatus.NO_CONTENT)
         self.send_api_header(paste_id)
+        self.send_api_cache_control_headers()
         self.send_header("Content-Length", "0")
         self.end_headers()
 
