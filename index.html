@@ -1,38 +1,363 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pastebin</title>
   <style>
-    html, body { height: 100%; }
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; box-sizing: border-box; line-height: 1.5; display: flex; flex-direction: column; gap: 0.75rem; }
-    h1 { margin: 0; font-size: 2rem; font-weight: 600; }
-    .toolbar { display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; }
-    textarea { width: 100%; flex: 1; min-height: 0; box-sizing: border-box; font-family: Consolas, 'Courier New', monospace; }
-    button { margin-right: 0; padding: .9rem 1.4rem; font-size: 1rem; font-weight: 600; }
-    pre { margin: 0; background: #f5f5f5; padding: .6rem .8rem; white-space: pre-wrap; min-height: 2.25rem; box-sizing: border-box; }
+    :root {
+      --bg-0: #f8f8f5;
+      --bg-1: #f0e6d5;
+      --ink-0: #1f2d1b;
+      --ink-1: #4b5b45;
+      --accent: #1f7a4d;
+      --accent-strong: #17603d;
+      --line: #d6dccd;
+      --surface: rgba(255, 255, 255, 0.78);
+      --surface-strong: rgba(255, 255, 255, 0.9);
+      --shadow: 0 20px 45px rgba(38, 59, 33, 0.17);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Trebuchet MS', 'Segoe UI', Verdana, sans-serif;
+      color: var(--ink-0);
+      background:
+        radial-gradient(circle at 88% -10%, rgba(255, 210, 130, 0.5), transparent 38%),
+        radial-gradient(circle at 12% 110%, rgba(66, 153, 93, 0.2), transparent 42%),
+        linear-gradient(150deg, var(--bg-0), var(--bg-1));
+      display: grid;
+      place-items: center;
+      padding: 1.2rem;
+      line-height: 1.5;
+    }
+
+    .frame {
+      width: min(980px, 100%);
+      height: min(92vh, 880px);
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      padding: clamp(1rem, 2vw, 1.45rem);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-radius: 20px;
+      background: var(--surface);
+      backdrop-filter: blur(8px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 3vw, 2.3rem);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--ink-1);
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+
+    .keybar {
+      display: grid;
+      grid-template-columns: auto minmax(220px, 1fr) auto;
+      gap: 0.65rem;
+      align-items: center;
+      padding: 0.72rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-strong);
+    }
+
+    .keybar label {
+      font-weight: 600;
+      color: var(--ink-1);
+      white-space: nowrap;
+    }
+
+    .keybar input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.65rem 0.75rem;
+      font: 600 0.92rem/1.2 Consolas, 'Courier New', monospace;
+      color: var(--ink-0);
+      background: #fff;
+      outline: none;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .keybar input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31, 122, 77, 0.15);
+    }
+
+    .meta {
+      grid-column: 1 / -1;
+      font: 600 0.83rem/1.25 Consolas, 'Courier New', monospace;
+      color: var(--ink-1);
+      opacity: 0.95;
+      word-break: break-all;
+    }
+
+    .meta .reset-id {
+      margin-left: 0.6rem;
+      color: var(--accent-strong);
+      text-decoration: underline;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .meta .reset-id:hover {
+      filter: brightness(0.9);
+    }
+
+    .meta .crypto-warning {
+      margin-left: 0.6rem;
+      color: #b05a00;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.55rem;
+    }
+
+    button {
+      border: 1px solid var(--accent-strong);
+      border-radius: 11px;
+      padding: 0.65rem 1rem;
+      font: 700 0.9rem/1.1 'Trebuchet MS', 'Segoe UI', Verdana, sans-serif;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      color: #fff;
+      background: linear-gradient(165deg, var(--accent), var(--accent-strong));
+      box-shadow: 0 7px 18px rgba(31, 122, 77, 0.28);
+      transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(31, 122, 77, 0.34);
+      filter: saturate(1.03);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: 0 5px 14px rgba(31, 122, 77, 0.24);
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: wait;
+      transform: none;
+    }
+
+    .button-reset {
+      border-color: #c43f3f;
+      color: #c43f3f;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 6px 16px rgba(196, 63, 63, 0.2);
+    }
+
+    .button-reset:hover {
+      box-shadow: 0 8px 18px rgba(196, 63, 63, 0.26);
+      filter: none;
+    }
+
+    textarea {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0.92rem;
+      color: #0f1b0d;
+      background: rgba(255, 255, 255, 0.86);
+      outline: none;
+      resize: none;
+      font: 500 0.95rem/1.5 Consolas, 'Courier New', monospace;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31, 122, 77, 0.15);
+    }
+
+    pre {
+      margin: 0;
+      flex-shrink: 0;
+      min-height: 2.4rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.66rem 0.8rem;
+      color: #2f3d2e;
+      background: rgba(255, 255, 255, 0.9);
+      white-space: pre-wrap;
+      font: 500 0.84rem/1.45 Consolas, 'Courier New', monospace;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 0.75rem;
+      }
+
+      .frame {
+        height: 94vh;
+        border-radius: 16px;
+      }
+
+      .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .actions {
+        width: 100%;
+      }
+
+      .actions button {
+        flex: 1;
+      }
+
+      .keybar {
+        grid-template-columns: 1fr;
+      }
+
+      .keybar input,
+      .keybar button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
+
 <body>
-  <div class="toolbar">
-    <h1>Pastebin</h1>
-    <button id="update">Update</button>
-  </div>
-  <textarea id="content" placeholder="paste text here"></textarea>
-  <pre id="output"></pre>
+  <main class="frame">
+    <div class="toolbar">
+      <div>
+        <h1>Pastebin</h1>
+        <p class="subtitle">One page, multiple secure buckets via slow-hash ids.</p>
+      </div>
+      <div class="actions">
+        <button id="clear-paste" class="button-reset">Reset</button>
+        <button id="update">Update</button>
+      </div>
+    </div>
+    <div class="keybar">
+      <label for="extract-code">Extraction code</label>
+      <input id="extract-code" type="password" placeholder="Enter extraction code, then click Apply">
+      <button id="apply-code">Apply</button>
+      <span class="meta">paste id: <span id="paste-id">default</span><span id="reset-id" class="reset-id"
+          hidden>reset</span><span id="crypto-warning" class="crypto-warning" hidden>warning: Web Crypto unavailable,
+          using default id</span></span>
+    </div>
+    <textarea id="content" placeholder="Paste text here"></textarea>
+    <pre id="output"></pre>
+  </main>
   <script>
-    const api = './api';
+    window.PASTEBIN_CONFIG = {
+      storageKey: 'pastebin.currentPasteId',
+      pasteIdPattern: '^[A-Za-z0-9_-]{1,128}$',
+      pbkdf2Salt: 'paste-bin.v1.salt',
+      pbkdf2Iterations: 1000000,
+      pollIntervalMs: 1000,
+      timeLocale: 'zh-CN',
+    };
+  </script>
+  <script>
+    const CONFIG = window.PASTEBIN_CONFIG;
     const content = document.getElementById('content');
     const output = document.getElementById('output');
+    const updateButton = document.getElementById('update');
+    const clearPasteButton = document.getElementById('clear-paste');
+    const extractCode = document.getElementById('extract-code');
+    const applyCodeButton = document.getElementById('apply-code');
+    const pasteIdView = document.getElementById('paste-id');
+    const resetIdControl = document.getElementById('reset-id');
+    const cryptoWarning = document.getElementById('crypto-warning');
+    const encoder = new TextEncoder();
+    const hasWebCrypto = Boolean(window.crypto && window.crypto.subtle);
+    const storageKey = CONFIG.storageKey;
+    const pasteIdPattern = new RegExp(CONFIG.pasteIdPattern);
+    const timeLocale = CONFIG.timeLocale;
     let lastSignature = '';
+    let currentPasteId = 'default';
+
+    function isValidPasteId(value) {
+      return typeof value === 'string' && pasteIdPattern.test(value);
+    }
+
+    function savePasteId(pasteId) {
+      try {
+        localStorage.setItem(storageKey, pasteId);
+      } catch {
+        // Ignore storage failures (private mode or quota limits).
+      }
+    }
+
+    function setButtonBusy(button, busy) {
+      button.disabled = busy;
+    }
+
+    function restorePasteId() {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored && isValidPasteId(stored)) {
+          currentPasteId = stored;
+        }
+      } catch {
+        // Keep default when storage is unavailable.
+      }
+      syncPasteIdMeta();
+    }
+
+    function syncPasteIdMeta() {
+      pasteIdView.textContent = currentPasteId;
+      resetIdControl.hidden = currentPasteId === 'default';
+      cryptoWarning.hidden = hasWebCrypto;
+    }
+
+    function apiUrl() {
+      return `./api?id=${encodeURIComponent(currentPasteId)}`;
+    }
+
+    async function requestApi(options = {}) {
+      const response = await fetch(apiUrl(), options);
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+      }
+      return response;
+    }
 
     function signatureFromHeaders(response) {
       return `${response.headers.get('X-Data-Length') || ''}:${response.headers.get('Last-Modified') || ''}`;
     }
 
     function nowText() {
-      return new Date().toLocaleString('zh-CN', { hour12: false });
+      return new Date().toLocaleString(timeLocale, { hour12: false });
     }
 
     function setStatus(text) {
@@ -50,6 +375,69 @@
       setStatus(String(error));
     }
 
+    function toHex(bytes) {
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function derivePasteId(extractionCode) {
+      const normalized = extractionCode.trim();
+      if (!normalized) {
+        return 'default';
+      }
+
+      if (!hasWebCrypto) {
+        return 'default';
+      }
+
+      const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        encoder.encode(normalized),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+      );
+      const bits = await window.crypto.subtle.deriveBits(
+        {
+          name: 'PBKDF2',
+          hash: 'SHA-256',
+          salt: encoder.encode(CONFIG.pbkdf2Salt),
+          iterations: CONFIG.pbkdf2Iterations,
+        },
+        keyMaterial,
+        256
+      );
+      return toHex(new Uint8Array(bits)).slice(0, 32);
+    }
+
+    async function applyExtractionCode() {
+      setButtonBusy(applyCodeButton, true);
+      setStatus('deriving paste id...');
+      try {
+        const hasInputCode = extractCode.value.trim().length > 0;
+        currentPasteId = await derivePasteId(extractCode.value);
+        if (!isValidPasteId(currentPasteId)) {
+          throw new Error('Derived paste id is invalid.');
+        }
+        savePasteId(currentPasteId);
+        syncPasteIdMeta();
+        lastSignature = '';
+        await loadContent();
+        if (hasInputCode && !hasWebCrypto) {
+          setStatus('Web Crypto unavailable; using default id.');
+        }
+      } finally {
+        setButtonBusy(applyCodeButton, false);
+      }
+    }
+
+    async function resetPasteId() {
+      currentPasteId = 'default';
+      savePasteId(currentPasteId);
+      syncPasteIdMeta();
+      lastSignature = '';
+      await loadContent();
+    }
+
     function formatLastModified(response) {
       const lastModified = response.headers.get('Last-Modified');
       if (!lastModified) {
@@ -59,24 +447,35 @@
       if (Number.isNaN(parsed.getTime())) {
         return lastModified;
       }
-      return parsed.toLocaleString('zh-CN', { hour12: false });
+      return parsed.toLocaleString(timeLocale, { hour12: false });
     }
 
     async function loadContent() {
-      const response = await fetch(api);
+      const response = await requestApi();
       applyMaxBytes(response);
       content.value = await response.text();
       lastSignature = signatureFromHeaders(response);
-      setStatus('loaded');
+      setStatus(`loaded (${currentPasteId})`);
     }
 
     async function updateContent() {
-      await fetch(api, { method: 'PUT', body: content.value, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      await requestApi({ method: 'PUT', body: content.value, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
       await loadContent();
     }
 
+    async function clearCurrentPaste() {
+      setButtonBusy(clearPasteButton, true);
+      setStatus(`clearing current paste (id=${currentPasteId})...`);
+      try {
+        await requestApi({ method: 'PUT', body: '', headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+        await loadContent();
+      } finally {
+        setButtonBusy(clearPasteButton, false);
+      }
+    }
+
     async function pollForChanges() {
-      const response = await fetch(api, { method: 'HEAD' });
+      const response = await requestApi({ method: 'HEAD' });
       applyMaxBytes(response);
       const currentSignature = signatureFromHeaders(response);
       if (lastSignature && currentSignature !== lastSignature) {
@@ -87,15 +486,36 @@
       setStatus(`size: ${response.headers.get('X-Data-Length')}; last-modified: ${formatLastModified(response)}`);
     }
 
-    document.getElementById('update').onclick = () => {
+    updateButton.addEventListener('click', () => {
       updateContent().catch(showError);
-    };
+    });
 
+    clearPasteButton.addEventListener('click', () => {
+      clearCurrentPaste().catch(showError);
+    });
+
+    applyCodeButton.addEventListener('click', () => {
+      applyExtractionCode().catch(showError);
+    });
+
+    extractCode.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applyExtractionCode().catch(showError);
+      }
+    });
+
+    resetIdControl.addEventListener('click', () => {
+      resetPasteId().catch(showError);
+    });
+
+    restorePasteId();
     loadContent().catch(showError);
 
     setInterval(() => {
       pollForChanges().catch(showError);
-    }, 1000);
+    }, CONFIG.pollIntervalMs);
   </script>
 </body>
+
 </html>

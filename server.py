@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import threading
 from dataclasses import dataclass
 from email.utils import formatdate
@@ -8,6 +9,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from time import time
+from urllib.parse import parse_qs, urlsplit
 
 
 @dataclass(frozen=True)
@@ -20,25 +22,28 @@ class Settings:
 class PasteStore:
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._text = ""
-        self._mtime = time()
+        self._entries: dict[str, tuple[str, float]] = {}
+        self._empty_mtime = time()
 
-    def read(self) -> tuple[bytes, float]:
+    def read(self, paste_id: str) -> tuple[bytes, float]:
         with self._lock:
-            return self._text.encode("utf-8"), self._mtime
+            text, mtime = self._entries.get(paste_id, ("", self._empty_mtime))
+            return text.encode("utf-8"), mtime
 
-    def write(self, text: str) -> float:
+    def write(self, paste_id: str, text: str) -> float:
         with self._lock:
-            self._text = text
-            self._mtime = time()
-            return self._mtime
+            mtime = time()
+            self._entries[paste_id] = (text, mtime)
+            return mtime
 
 
 class PasteHandler(BaseHTTPRequestHandler):
     server_version = "PastebinHTTP/0.1"
+    paste_id_pattern = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
-    def send_api_header(self, data_length: int | None = None) -> None:
+    def send_api_header(self, paste_id: str, data_length: int | None = None) -> None:
         self.send_header("X-Max-Bytes", str(self.settings.max_bytes))
+        self.send_header("X-Paste-Id", paste_id)
         if data_length is not None:
             self.send_header("X-Data-Length", str(data_length))
 
@@ -54,15 +59,27 @@ class PasteHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, PUT, HEAD, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Content-Length, If-Modified-Since")
-        self.send_header("Access-Control-Expose-Headers", "X-Max-Bytes, X-Data-Length, Last-Modified")
+        self.send_header("Access-Control-Expose-Headers", "X-Max-Bytes, X-Data-Length, X-Paste-Id, Last-Modified")
         super().end_headers()
+
+    def parse_request_target(self) -> tuple[str, str | None]:
+        parts = urlsplit(self.path)
+        if parts.path != "/api":
+            return parts.path, None
+
+        query = parse_qs(parts.query)
+        paste_id = query.get("id", ["default"])[0].strip() or "default"
+        if not self.paste_id_pattern.fullmatch(paste_id):
+            return parts.path, None
+        return parts.path, paste_id
 
     def do_OPTIONS(self) -> None:
         self.send_response(HTTPStatus.NO_CONTENT)
         self.end_headers()
 
     def do_GET(self) -> None:
-        if self.path in ("/", "/index.html"):
+        path, paste_id = self.parse_request_target()
+        if path in ("/", "/index.html"):
             index = Path("index.html").read_bytes()
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -71,33 +88,47 @@ class PasteHandler(BaseHTTPRequestHandler):
             self.wfile.write(index)
             return
 
-        if self.path != "/api":
+        if path != "/api":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
 
-        data, mtime = self.store.read()
+        if paste_id is None:
+            self.send_error(HTTPStatus.BAD_REQUEST, "invalid paste id")
+            return
+
+        data, mtime = self.store.read(paste_id)
         self.send_response(HTTPStatus.OK)
-        self.send_api_header(len(data))
+        self.send_api_header(paste_id, len(data))
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Last-Modified", formatdate(mtime, usegmt=True))
         self.end_headers()
         self.wfile.write(data)
 
     def do_HEAD(self) -> None:
-        if self.path != "/api":
+        path, paste_id = self.parse_request_target()
+        if path != "/api":
             self.send_error(HTTPStatus.NOT_FOUND)
             return
 
-        data, mtime = self.store.read()
+        if paste_id is None:
+            self.send_error(HTTPStatus.BAD_REQUEST, "invalid paste id")
+            return
+
+        data, mtime = self.store.read(paste_id)
         self.send_response(HTTPStatus.OK)
-        self.send_api_header(len(data))
+        self.send_api_header(paste_id, len(data))
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Last-Modified", formatdate(mtime, usegmt=True))
         self.end_headers()
 
     def do_PUT(self) -> None:
-        if self.path != "/api":
+        path, paste_id = self.parse_request_target()
+        if path != "/api":
             self.send_error(HTTPStatus.NOT_FOUND)
+            return
+
+        if paste_id is None:
+            self.send_error(HTTPStatus.BAD_REQUEST, "invalid paste id")
             return
 
         content_length = self.headers.get("Content-Length")
@@ -126,9 +157,9 @@ class PasteHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, "body must be utf-8 text")
             return
 
-        self.store.write(text)
+        self.store.write(paste_id, text)
         self.send_response(HTTPStatus.NO_CONTENT)
-        self.send_api_header()
+        self.send_api_header(paste_id)
         self.send_header("Content-Length", "0")
         self.end_headers()
 
