@@ -14,8 +14,8 @@ Notice: The paste content is stored only in memory and is lost when the process 
 
 - `GET /api` returns the current text.
 - `PUT /api` replaces the current text with the request body.
-- `HEAD /api` returns `Content-Length` and `Last-Modified` for change detection.
-- API responses include `X-Max-Bytes`.
+- `HEAD /api` returns `X-Data-Length` and `Last-Modified` for change detection.
+- API responses include `X-Max-Bytes` and `X-Data-Length`.
 
 ## Static front-end
 

@@ -37,8 +37,10 @@ class PasteStore:
 class PasteHandler(BaseHTTPRequestHandler):
     server_version = "PastebinHTTP/0.1"
 
-    def send_api_header(self) -> None:
+    def send_api_header(self, data_length: int | None = None) -> None:
         self.send_header("X-Max-Bytes", str(self.settings.max_bytes))
+        if data_length is not None:
+            self.send_header("X-Data-Length", str(data_length))
 
     @property
     def settings(self) -> Settings:
@@ -52,6 +54,7 @@ class PasteHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, PUT, HEAD, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Content-Length, If-Modified-Since")
+        self.send_header("Access-Control-Expose-Headers", "X-Max-Bytes, X-Data-Length, Last-Modified")
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
@@ -74,9 +77,8 @@ class PasteHandler(BaseHTTPRequestHandler):
 
         data, mtime = self.store.read()
         self.send_response(HTTPStatus.OK)
-        self.send_api_header()
+        self.send_api_header(len(data))
         self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
         self.send_header("Last-Modified", formatdate(mtime, usegmt=True))
         self.end_headers()
         self.wfile.write(data)
@@ -88,9 +90,8 @@ class PasteHandler(BaseHTTPRequestHandler):
 
         data, mtime = self.store.read()
         self.send_response(HTTPStatus.OK)
-        self.send_api_header()
+        self.send_api_header(len(data))
         self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(data)))
         self.send_header("Last-Modified", formatdate(mtime, usegmt=True))
         self.end_headers()
 

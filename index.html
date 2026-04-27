@@ -28,7 +28,7 @@
     let lastSignature = '';
 
     function signatureFromHeaders(response) {
-      return `${response.headers.get('Content-Length') || ''}:${response.headers.get('Last-Modified') || ''}`;
+      return `${response.headers.get('X-Data-Length') || ''}:${response.headers.get('Last-Modified') || ''}`;
     }
 
     function nowText() {
@@ -48,6 +48,18 @@
 
     function showError(error) {
       setStatus(String(error));
+    }
+
+    function formatLastModified(response) {
+      const lastModified = response.headers.get('Last-Modified');
+      if (!lastModified) {
+        return '';
+      }
+      const parsed = new Date(lastModified);
+      if (Number.isNaN(parsed.getTime())) {
+        return lastModified;
+      }
+      return parsed.toLocaleString('zh-CN', { hour12: false });
     }
 
     async function loadContent() {
@@ -72,7 +84,7 @@
         return;
       }
       lastSignature = currentSignature;
-      setStatus(`size: ${response.headers.get('Content-Length')}; last-modified: ${response.headers.get('Last-Modified')}`);
+      setStatus(`size: ${response.headers.get('X-Data-Length')}; last-modified: ${formatLastModified(response)}`);
     }
 
     document.getElementById('update').onclick = () => {
