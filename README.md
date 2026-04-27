@@ -1,6 +1,6 @@
 # Pastebin
 
-Zero-dependency, ultra-minimal single-paste backend using only Python's standard library.
+Zero-dependency, ultra-minimal multi-paste backend using only Python's standard library.
 
 ## Run
 
@@ -8,14 +8,17 @@ Zero-dependency, ultra-minimal single-paste backend using only Python's standard
 python server.py
 ```
 
-Notice: The paste content is stored only in memory and is lost when the process restarts.
+Notice: Paste content is stored only in memory and is lost when the process restarts.
 
 ## API
 
-- `GET /api` returns the current text.
-- `PUT /api` replaces the current text with the request body.
-- `HEAD /api` returns `X-Data-Length` and `Last-Modified` for change detection.
-- API responses include `X-Max-Bytes` and `X-Data-Length`.
+- `GET /api?id=<paste_id>` returns the current text.
+- `PUT /api?id=<paste_id>` replaces the current text with the request body.
+- `HEAD /api?id=<paste_id>` returns `X-Data-Length` and `Last-Modified` for change detection.
+- `OPTIONS /api` supports CORS preflight.
+- If `id` is omitted, the server uses `default`.
+- Valid `paste_id` pattern: `^[A-Za-z0-9_-]{1,128}$`.
+- API responses include `X-Max-Bytes`, `X-Paste-Id`, and (for `GET`/`HEAD`) `X-Data-Length`.
 
 ## Static front-end
 
