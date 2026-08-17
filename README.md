@@ -12,13 +12,20 @@ Notice: Paste content is stored only in memory and is lost when the process rest
 
 ## API
 
-- `GET /api?id=<paste_id>` returns the current text.
-- `PUT /api?id=<paste_id>` replaces the current text with the request body.
-- `HEAD /api?id=<paste_id>` returns `X-Data-Length` and `Last-Modified` for change detection.
-- `OPTIONS /api` supports CORS preflight.
+- `GET /ws?id=<paste_id>` upgrades to the only data API: a bidirectional WebSocket.
 - If `id` is omitted, the server uses `default`.
 - Valid `paste_id` pattern: `^[A-Za-z0-9_-]{1,128}$`.
-- API responses include `X-Max-Bytes`, `X-Paste-Id`, and (for `GET`/`HEAD`) `X-Data-Length`.
+
+Client messages are JSON objects:
+
+```json
+{"type":"get","requestId":"1"}
+{"type":"put","requestId":"2","content":"hello"}
+```
+
+The server responds with `paste`, `ack`, or `error` messages. Every `paste` message contains the complete current content, revision, UTF-8 byte length, modification time, and size limit. A successful write broadcasts a `paste` message to every WebSocket subscribed to the same paste id.
+
+The former `/api` REST endpoint has been removed. The browser reconnects with exponential backoff and sends `get` again after reconnecting.
 
 ## Static front-end
 
