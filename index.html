@@ -266,6 +266,7 @@
         <button id="update">Update</button>
       </div>
     </div>
+    <textarea id="content" placeholder="Paste text here"></textarea>
     <div class="keybar">
       <label for="extract-code">Extraction code</label>
       <input id="extract-code" type="password" placeholder="Enter extraction code, then click Apply">
@@ -274,7 +275,6 @@
           hidden>reset</span><span id="crypto-warning" class="crypto-warning" hidden>warning: Web Crypto unavailable,
           using default id</span></span>
     </div>
-    <textarea id="content" placeholder="Paste text here"></textarea>
     <pre id="output"></pre>
   </main>
   <script>
@@ -430,6 +430,7 @@
     }
 
     async function resetPasteId() {
+      extractCode.value = '';
       currentPasteId = 'default';
       savePasteId(currentPasteId);
       syncPasteIdMeta();
