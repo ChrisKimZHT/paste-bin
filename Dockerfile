@@ -1,8 +1,14 @@
-FROM python:3.13-slim
+FROM golang:1.27-alpine AS build
 
 WORKDIR /app
 
-COPY server.py index.html ./
+COPY go.mod go.sum ./
+RUN go mod download
+COPY main.go server.go store.go index.html ./
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /pastebin .
+
+FROM scratch
+COPY --from=build /pastebin /pastebin
 
 ENV PASTEBIN_HOST=0.0.0.0 \
     PASTEBIN_PORT=8000 \
@@ -10,4 +16,4 @@ ENV PASTEBIN_HOST=0.0.0.0 \
 
 EXPOSE 8000
 
-CMD ["python", "server.py"]
+CMD ["/pastebin"]
