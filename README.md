@@ -19,12 +19,16 @@ go build -trimpath -ldflags="-s -w" -o pastebin .
 
 On Windows, build with `-o pastebin.exe` and run `.\pastebin.exe`.
 
+Startup prints `Pastebin dev` before loading configuration. To embed a release version, build with `go build -trimpath -ldflags="-s -w -X main.version=v1.0.0" -o pastebin .`.
+
 Or use Docker:
 
 ```bash
 docker build -t pastebin .
 docker run --rm -p 8000:8000 pastebin
 ```
+
+To embed a Docker release version, use `docker build --build-arg VERSION=v1.0.0 -t pastebin .`.
 
 Notice: Paste content is stored only in memory and is lost when the process restarts.
 

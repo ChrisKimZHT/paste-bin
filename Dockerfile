@@ -5,7 +5,8 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY main.go server.go store.go index.html ./
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /pastebin .
+ARG VERSION=dev
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /pastebin .
 
 FROM scratch
 COPY --from=build /pastebin /pastebin

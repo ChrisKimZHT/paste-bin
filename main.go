@@ -12,6 +12,9 @@ import (
 const defaultMaxBytes = 128 * 1024
 const defaultMaxEntries = 1024
 
+// Override at build time with -ldflags="-X main.version=v1.0.0".
+var version = "dev"
+
 type settings struct {
 	host       string
 	port       string
@@ -46,6 +49,7 @@ func env(name, fallback string) string {
 }
 
 func main() {
+	fmt.Printf("Pastebin %s\n", version)
 	config, err := loadSettings()
 	if err != nil {
 		log.Fatal(err)
