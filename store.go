@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"encoding/json"
 	"net/http"
 	"sync"
@@ -24,19 +25,22 @@ type pasteMessage struct {
 }
 
 type pasteStore struct {
-	mu          sync.Mutex
-	entries     map[string]paste
-	subscribers map[string]map[*client]struct{}
-	started     string
-	maxBytes    int
+	mu            sync.Mutex
+	entries       map[string]paste
+	creationOrder list.List
+	subscribers   map[string]map[*client]struct{}
+	started       string
+	maxBytes      int
+	maxEntries    int
 }
 
-func newStore(maxBytes int) *pasteStore {
+func newStore(maxBytes, maxEntries int) *pasteStore {
 	return &pasteStore{
 		entries:     make(map[string]paste),
 		subscribers: make(map[string]map[*client]struct{}),
 		started:     time.Now().UTC().Format(http.TimeFormat),
 		maxBytes:    maxBytes,
+		maxEntries:  maxEntries,
 	}
 }
 
@@ -94,6 +98,16 @@ func (s *pasteStore) sendSnapshot(id string, recipient *client, requestID json.R
 func (s *pasteStore) writeAndBroadcast(id, content string, writer *client, requestID json.RawMessage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if _, exists := s.entries[id]; !exists {
+		// FIFO by creation order; reads and updates do not refresh an entry's age.
+		if len(s.entries) >= s.maxEntries {
+			oldest := s.creationOrder.Front()
+			delete(s.entries, oldest.Value.(string))
+			s.creationOrder.Remove(oldest)
+		}
+		s.creationOrder.PushBack(id)
+	}
 
 	entry := paste{
 		content:      content,

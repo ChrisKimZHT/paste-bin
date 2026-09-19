@@ -56,6 +56,7 @@ Environment variables:
 - `PASTEBIN_HOST` default `127.0.0.1`
 - `PASTEBIN_PORT` default `8000`
 - `PASTEBIN_MAX_BYTES` default `131072` (128 KB)
+- `PASTBIN_MAX_ENTRIES` default `1024`; must be a positive integer. Once full, writing a new paste ID automatically evicts the oldest entry by creation order (FIFO). Reads and updates do not change this order. Only successful writes create entries, including writes of empty content. Reading an evicted ID returns an empty paste with revision 0; writing it again creates a new entry with revision 1.
 
 The API, browser UI, paste IDs, and configuration are unchanged from the Python version. Content limits count UTF-8 bytes. Slow clients whose outgoing queue fills are disconnected; the browser reconnects and fetches the latest content.
 

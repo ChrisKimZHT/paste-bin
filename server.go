@@ -35,8 +35,8 @@ type server struct {
 	store *pasteStore
 }
 
-func newServer(maxBytes int) *server {
-	return &server{store: newStore(maxBytes)}
+func newServer(maxBytes, maxEntries int) *server {
+	return &server{store: newStore(maxBytes, maxEntries)}
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

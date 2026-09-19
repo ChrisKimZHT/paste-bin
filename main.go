@@ -10,11 +10,13 @@ import (
 )
 
 const defaultMaxBytes = 128 * 1024
+const defaultMaxEntries = 1024
 
 type settings struct {
-	host     string
-	port     string
-	maxBytes int
+	host       string
+	port       string
+	maxBytes   int
+	maxEntries int
 }
 
 func loadSettings() (settings, error) {
@@ -24,10 +26,15 @@ func loadSettings() (settings, error) {
 	if err != nil || maxBytes < 0 || int64(maxBytes) > largestContentLimit {
 		return settings{}, fmt.Errorf("PASTEBIN_MAX_BYTES must be a non-negative integer within the supported range")
 	}
+	maxEntries, err := strconv.Atoi(env("PASTBIN_MAX_ENTRIES", strconv.Itoa(defaultMaxEntries)))
+	if err != nil || maxEntries <= 0 {
+		return settings{}, fmt.Errorf("PASTBIN_MAX_ENTRIES must be a positive integer within the supported range")
+	}
 	return settings{
-		host:     env("PASTEBIN_HOST", "127.0.0.1"),
-		port:     env("PASTEBIN_PORT", "8000"),
-		maxBytes: maxBytes,
+		host:       env("PASTEBIN_HOST", "127.0.0.1"),
+		port:       env("PASTEBIN_PORT", "8000"),
+		maxBytes:   maxBytes,
+		maxEntries: maxEntries,
 	}, nil
 }
 
@@ -45,5 +52,5 @@ func main() {
 	}
 	address := net.JoinHostPort(config.host, config.port)
 	fmt.Printf("Listening on http://%s\n", address)
-	log.Fatal(http.ListenAndServe(address, newServer(config.maxBytes)))
+	log.Fatal(http.ListenAndServe(address, newServer(config.maxBytes, config.maxEntries)))
 }
