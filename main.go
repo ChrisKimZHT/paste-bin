@@ -29,9 +29,9 @@ func loadSettings() (settings, error) {
 	if err != nil || maxBytes < 0 || int64(maxBytes) > largestContentLimit {
 		return settings{}, fmt.Errorf("PASTEBIN_MAX_BYTES must be a non-negative integer within the supported range")
 	}
-	maxEntries, err := strconv.Atoi(env("PASTBIN_MAX_ENTRIES", strconv.Itoa(defaultMaxEntries)))
+	maxEntries, err := strconv.Atoi(env("PASTEBIN_MAX_ENTRIES", strconv.Itoa(defaultMaxEntries)))
 	if err != nil || maxEntries <= 0 {
-		return settings{}, fmt.Errorf("PASTBIN_MAX_ENTRIES must be a positive integer within the supported range")
+		return settings{}, fmt.Errorf("PASTEBIN_MAX_ENTRIES must be a positive integer within the supported range")
 	}
 	return settings{
 		host:       env("PASTEBIN_HOST", "127.0.0.1"),
