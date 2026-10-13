@@ -3,6 +3,7 @@ package main
 import (
 	"container/list"
 	"encoding/json"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -32,6 +33,7 @@ type pasteStore struct {
 	started       string
 	maxBytes      int
 	maxEntries    int
+	totalBytes    int64
 }
 
 func newStore(maxBytes, maxEntries int) *pasteStore {
@@ -103,7 +105,9 @@ func (s *pasteStore) writeAndBroadcast(id, content string, writer *client, reque
 		// FIFO by creation order; reads and updates do not refresh an entry's age.
 		if len(s.entries) >= s.maxEntries {
 			oldest := s.creationOrder.Front()
-			delete(s.entries, oldest.Value.(string))
+			oldestID := oldest.Value.(string)
+			s.totalBytes -= int64(len(s.entries[oldestID].content))
+			delete(s.entries, oldestID)
 			s.creationOrder.Remove(oldest)
 		}
 		s.creationOrder.PushBack(id)
@@ -114,7 +118,10 @@ func (s *pasteStore) writeAndBroadcast(id, content string, writer *client, reque
 		revision:     s.entries[id].revision + 1,
 		lastModified: time.Now().UTC().Format(http.TimeFormat),
 	}
+	s.totalBytes += int64(len(content)) - int64(len(s.entries[id].content))
 	s.entries[id] = entry
+	log.Printf("paste updated: paste_id=%s size_bytes=%d total_pastes=%d total_bytes=%d",
+		id, len(content), len(s.entries), s.totalBytes)
 
 	// Queue snapshots, broadcasts, and acknowledgments under the same lock so
 	// concurrent writes cannot deliver revisions out of order. Network I/O is

@@ -49,12 +49,12 @@ func env(name, fallback string) string {
 }
 
 func main() {
-	fmt.Printf("Pastebin %s\n", version)
+	log.Printf("Pastebin %s", version)
 	config, err := loadSettings()
 	if err != nil {
 		log.Fatal(err)
 	}
 	address := net.JoinHostPort(config.host, config.port)
-	fmt.Printf("Listening on http://%s\n", address)
+	log.Printf("Listening on http://%s", address)
 	log.Fatal(http.ListenAndServe(address, newServer(config.maxBytes, config.maxEntries)))
 }
