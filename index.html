@@ -343,6 +343,13 @@
     }
 
     function restorePasteId() {
+      const hashPasteId = readHashPasteId();
+      if (hashPasteId !== null) {
+        currentPasteId = hashPasteId;
+        savePasteId(currentPasteId);
+        syncPasteIdMeta(true);
+        return;
+      }
       try {
         const stored = localStorage.getItem(storageKey);
         if (stored && isValidPasteId(stored)) {
@@ -351,13 +358,46 @@
       } catch {
         // Keep default when storage is unavailable.
       }
-      syncPasteIdMeta();
+      syncPasteIdMeta(true);
     }
 
-    function syncPasteIdMeta() {
+    function readHashPasteId() {
+      try {
+        const pasteId = decodeURIComponent(window.location.hash.slice(1));
+        return isValidPasteId(pasteId) ? pasteId : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function syncPasteIdMeta(replaceHistory = false) {
       pasteIdView.textContent = currentPasteId;
       resetIdControl.hidden = currentPasteId === 'default';
       cryptoWarning.hidden = hasWebCrypto;
+      const hash = `#${currentPasteId}`;
+      if (window.location.hash !== hash) {
+        const url = new URL(window.location.href);
+        url.hash = hash;
+        // History API updates the link without triggering a second activation.
+        if (replaceHistory) {
+          window.history.replaceState(null, '', url);
+        } else {
+          window.history.pushState(null, '', url);
+        }
+      }
+    }
+
+    function navigateToHashPaste() {
+      const pasteId = window.location.hash ? readHashPasteId() : 'default';
+      if (pasteId === null || pasteId === currentPasteId) {
+        syncPasteIdMeta(true);
+        return;
+      }
+      currentPasteId = pasteId;
+      extractCode.value = '';
+      savePasteId(currentPasteId);
+      syncPasteIdMeta(true);
+      activateCurrentPaste();
     }
 
     function nowText() {
@@ -414,14 +454,19 @@
     }
 
     async function applyExtractionCode() {
+      const generation = pasteGeneration;
       setButtonBusy(applyCodeButton, true);
       setStatus('deriving paste id...');
       try {
         const hasInputCode = extractCode.value.trim().length > 0;
-        currentPasteId = await derivePasteId(extractCode.value);
-        if (!isValidPasteId(currentPasteId)) {
+        const pasteId = await derivePasteId(extractCode.value);
+        if (generation !== pasteGeneration) {
+          return;
+        }
+        if (!isValidPasteId(pasteId)) {
           throw new Error('Derived paste id is invalid.');
         }
+        currentPasteId = pasteId;
         savePasteId(currentPasteId);
         syncPasteIdMeta();
         activateCurrentPaste();
@@ -647,6 +692,8 @@
     resetIdControl.addEventListener('click', () => {
       resetPasteId().catch(showError);
     });
+
+    window.addEventListener('hashchange', navigateToHashPaste);
 
     restorePasteId();
     activateCurrentPaste();
